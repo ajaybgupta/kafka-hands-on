@@ -20,11 +20,11 @@ public class ProducerDemo {
         properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
         // Create Producer
-        KafkaProducer<String,String> producer = new KafkaProducer<String, String>(properties);
+        KafkaProducer<String, String> producer = new KafkaProducer<String, String>(properties);
 
         // Create Producer Record
-        ProducerRecord<String,String> record =
-                new ProducerRecord<String,String>("first-topic","Auto hello world");
+        ProducerRecord<String, String> record =
+                new ProducerRecord<String, String>("first-topic", "Auto hello world");
 
         // Send Data - Asynchronous
         producer.send(record);

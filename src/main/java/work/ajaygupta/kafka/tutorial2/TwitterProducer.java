@@ -10,6 +10,8 @@ import com.twitter.hbc.core.endpoint.StatusesFilterEndpoint;
 import com.twitter.hbc.core.processor.StringDelimitedProcessor;
 import com.twitter.hbc.httpclient.auth.Authentication;
 import com.twitter.hbc.httpclient.auth.OAuth1;
+import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +63,18 @@ public class TwitterProducer {
         client.connect();
 
         // Create Kafka Producer
+        KafkaProducer<String, String> kafkaProducer = createKafkaProducer();
+
+        // Add a Shutdown hook
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            logger.info("Stopping Application");
+            logger.info("Shutting down Client");
+            client.stop();
+            logger.info("Shutting down Kafka Producer");
+            kafkaProducer.close();
+            logger.info("Done.");
+        }));
+
         // Loop to send Kafka Tweets
         // on a different thread, or multiple different threads....
         while (!client.isDone()) {
@@ -75,6 +89,32 @@ public class TwitterProducer {
 
             if (msg != null) {
                 logger.info(msg);
+
+                // Create Producer Record
+                ProducerRecord<String, String> record =
+                        new ProducerRecord<String, String>("twitter_tweets", null, msg);
+
+                // Callback
+                Callback callback = new Callback() {
+                    @Override
+                    public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+                        // Executes Every Time when Record is Sent or An Exception is Thrown
+                        if (e == null) {
+                            // record was successfully sent
+                            logger.info("\n" +
+                                    "Received New Meta Data. \n" +
+                                    "Topic: " + recordMetadata.topic() + "\n" +
+                                    "Partition: " + recordMetadata.partition() + "\n" +
+                                    "Offset: " + recordMetadata.offset() + "\n" +
+                                    "Timestamp: " + recordMetadata.timestamp()
+                            );
+                        } else {
+                            logger.error("Error while producing", e);
+                        }
+                    }
+                };
+
+                kafkaProducer.send(record, callback);
             }
         }
         logger.info("End of application!");
@@ -103,5 +143,19 @@ public class TwitterProducer {
                 .endpoint(hosebirdEndpoint)
                 .processor(new StringDelimitedProcessor(msgQueue));
         return builder.build();
+    }
+
+    public KafkaProducer<String, String> createKafkaProducer() {
+        String bootStrapServers = "127.0.0.1:9092";
+        // Create Producer Properties
+        // We can get configuration from this website
+        // https://kafka.apache.org/20/documentation.html#producerconfigs
+        Properties properties = new Properties();
+        properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootStrapServers);
+        properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+
+        // Create Producer
+        return new KafkaProducer<String, String>(properties);
     }
 }
