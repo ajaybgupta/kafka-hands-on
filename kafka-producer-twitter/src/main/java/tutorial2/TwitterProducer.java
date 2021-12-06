@@ -1,4 +1,4 @@
-package work.ajaygupta.kafka.tutorial2;
+package tutorial2;
 
 import com.google.common.collect.Lists;
 import com.twitter.hbc.ClientBuilder;
@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
@@ -27,12 +26,14 @@ import java.util.concurrent.TimeUnit;
 public class TwitterProducer {
 
     Logger logger = LoggerFactory.getLogger(TwitterProducer.class.getName());
+    List<String> terms = Lists.newArrayList("india", "bitcoin", "politics", "soccer", "ipl");
+
 
     public TwitterProducer() {
     }
 
     public static void main(String[] args) {
-        String fileName = "src/main/resources/work/ajaygupta/kafka/tutorial2/twitter.config";
+        String fileName = "kafka-producer-twitter/src/main/resources/twitter.config";
         TwitterProducer twitterProducer = new TwitterProducer();
         TwitterCredentials twitterCredentials = twitterProducer.getTwitterCredentials(fileName);
         twitterProducer.run(twitterCredentials);
@@ -126,7 +127,6 @@ public class TwitterProducer {
         Hosts hosebirdHosts = new HttpHosts(Constants.STREAM_HOST);
         StatusesFilterEndpoint hosebirdEndpoint = new StatusesFilterEndpoint();
         // Optional: set up some followings and track terms
-        List<String> terms = Lists.newArrayList("india");
         hosebirdEndpoint.trackTerms(terms);
 
         String consumerKey = twitterCredentials.getConsumerKey();
@@ -154,6 +154,18 @@ public class TwitterProducer {
         properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootStrapServers);
         properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+
+        // Create Safe Producer
+        properties.setProperty(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
+        properties.setProperty(ProducerConfig.ACKS_CONFIG, "all");
+        properties.setProperty(ProducerConfig.RETRIES_CONFIG, Integer.toString(Integer.MAX_VALUE));
+        properties.setProperty(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, "5");
+        // Kafka 2.0 >= 1.1 so we can use 5, use 1 otherwise
+
+        // High Throughput Producer (At bit of expense of a bit of latency and CPU usage)
+        properties.setProperty(ProducerConfig.COMPRESSION_TYPE_CONFIG, "snappy");
+        properties.setProperty(ProducerConfig.LINGER_MS_CONFIG, "20");
+        properties.setProperty(ProducerConfig.BATCH_SIZE_CONFIG, Integer.toString(32 * 1024)); // 32 KB
 
         // Create Producer
         return new KafkaProducer<String, String>(properties);

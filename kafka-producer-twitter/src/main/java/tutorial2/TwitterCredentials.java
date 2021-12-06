@@ -1,4 +1,4 @@
-package work.ajaygupta.kafka.tutorial2;
+package tutorial2;
 
 public class TwitterCredentials {
     private String consumerKey;

@@ -16,4 +16,4 @@ buildNumber.properties
 .mvn/timing.properties
 
 ### Credentials ###
-src/main/resources/work/ajaygupta/kafka/tutorial2/twitter.config
+/kafka-producer-twitter/src/main/resources/twitter.config
