@@ -1,5 +1,6 @@
 package tutorial3;
 
+import com.google.gson.JsonParser;
 import org.apache.http.HttpHost;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -31,17 +32,35 @@ public class ElasticsearchConsumer {
         while (true) {
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
             for (ConsumerRecord record : records) {
+                // 2 Strategies
+                // Kafka Generic Id
+                // String id = record.topic() + "_" + record.partition() + "_" + record.offset();
+                // Twitter Feed Specific Id
+                String id = extractIdFromTweet(record.value().toString());
+
                 // Where we insert data into Elasticsearch
                 IndexRequest indexRequest = new IndexRequest(
                         "twitter",
-                        "tweets"
+                        "tweets",
+                        id // id to make it idempotent
                 ).source(record.value().toString(), XContentType.JSON);
                 IndexResponse indexResponse = client.index(indexRequest, RequestOptions.DEFAULT);
-                String id = indexResponse.getId();
-                logger.info("Id:" + id);
+                String responseId = indexResponse.getId();
+                logger.info("Id:" + responseId);
                 Thread.sleep(1000);
             }
         }
+    }
+
+    private static JsonParser jsonParser = new JsonParser();
+
+    public static String extractIdFromTweet(String tweetJSON) {
+        // GSON library
+        return jsonParser
+                .parse(tweetJSON)
+                .getAsJsonObject()
+                .get("id_str")
+                .getAsString();
     }
 
     public static RestHighLevelClient createClient() {
@@ -51,6 +70,7 @@ public class ElasticsearchConsumer {
         RestHighLevelClient client = new RestHighLevelClient(builder);
         return client;
     }
+
 
     public static KafkaConsumer<String, String> createConsumer(String topic) {
         String bootstrapServers = "127.0.0.1:9092";
