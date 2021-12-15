@@ -51,11 +51,9 @@ public class ProducerDemoWithCallback {
             };
             // Send Data - Asynchronous with Callback
             producer.send(record, callback);
-
+            // Flush Data
+            producer.flush();
         }
-
-        // Flush Data
-        producer.flush();
 
         // Flush and Close Data
         producer.close();
