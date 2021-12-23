@@ -20,6 +20,7 @@ public class StreamsFilterTweets {
         Properties properties = new Properties();
         properties.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092");
         properties.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "demo-kafka-streams");
+        // Ser Des as we are Serializing and Deserializing
         properties.setProperty(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.StringSerde.class.getName());
         properties.setProperty(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.StringSerde.class.getName());
 
@@ -27,10 +28,11 @@ public class StreamsFilterTweets {
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
         // Create Topic
-        KStream<String, String> inputTopic = streamsBuilder.stream("twitter_topics");
+        KStream<String, String> inputTopic = streamsBuilder.stream("twitter_tweets");
         KStream<String, String> filteredStream = inputTopic.filter(
+
                 // Filter for tweets which have user of 10000 followers
-                (k, jsonTweet) -> extractUserFollowerFromTweet(jsonTweet) > 10
+                (k, jsonTweet) -> extractUserFollowerFromTweet(jsonTweet) > 10000
         );
         filteredStream.to("important_tweets");
 

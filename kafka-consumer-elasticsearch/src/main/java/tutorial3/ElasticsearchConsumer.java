@@ -26,16 +26,23 @@ import java.util.Properties;
 public class ElasticsearchConsumer {
     public static void main(String[] args) throws IOException, InterruptedException {
         Logger logger = LoggerFactory.getLogger(ElasticsearchConsumer.class.getName());
+        // Elasticsearch Client
         RestHighLevelClient client = createClient();
 
+        // Kafka Consumer where the
         KafkaConsumer<String, String> consumer = createConsumer("twitter_tweets");
         while (true) {
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
             for (ConsumerRecord record : records) {
-                // 2 Strategies
-                // Kafka Generic Id
-                // String id = record.topic() + "_" + record.partition() + "_" + record.offset();
-                // Twitter Feed Specific Id
+
+                //   Non idempotent - Auto Generated Id
+//                IndexRequest indexRequest = new IndexRequest(
+//                        "twitter",
+//                        "tweets"
+//                ).source(record.value().toString(), XContentType.JSON);
+
+                // To make our consumer producer idempotent
+                // We will be leveraging Twitter feed specific id
                 String id = extractIdFromTweet(record.value().toString());
 
                 // Where we insert data into Elasticsearch
